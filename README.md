@@ -430,3 +430,4 @@ Telegram notifications, web configuration.
 ## License
 
 Follows the license of the parent Whisplay project.
+# whisplay-crypto-dashboard
