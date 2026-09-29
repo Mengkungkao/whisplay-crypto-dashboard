@@ -16,38 +16,38 @@ from app.utils.format import (
 )
 
 BLOCK_HEIGHT = 32
-COLUMN_X = (8, 126)
+COLUMN_X = (14, 126)
 
-# The header spells the asset out when it comfortably fits the width.
-FULL_NAMES = {"BTC": "BITCOIN", "ETH": "ETHEREUM", "SOL": "SOLANA", "XRP": "XRP"}
+# The page name spells the asset out when it comfortably fits the width.
+FULL_NAMES = {"BTC": "Bitcoin", "ETH": "Ethereum", "SOL": "Solana", "XRP": "XRP"}
 
 
 class StatisticsScreen(Screen):
     name = "statistics"
-    title = "BITCOIN"
+    title = "Statistics"
+
+    def title_for(self, ctx) -> str:
+        return FULL_NAMES.get(ctx.settings.symbol, ctx.settings.symbol)
 
     def render(self, draw, ctx):
         snap = ctx.snapshot
         settings = ctx.settings
         market = snap.market
 
-        widgets.draw_header(
-            draw, FULL_NAMES.get(settings.symbol, settings.symbol),
-            snap.online, refreshing=snap.refreshing,
-        )
+        top = theme.CONTENT_TOP
 
         # --- headline price ------------------------------------------------
         price_text = format_price(snap.best_price, settings.currency)
-        price_font = theme.fit_font(draw, price_text, 160, (26, 23, 20, 18), bold=True)
-        draw.text((8, 28), price_text, font=price_font, fill=theme.TEXT)
-        widgets.draw_change(draw, 8, 58, snap.best_change_24h, font_size=13)
+        price_font = theme.fit_font(draw, price_text, 150, (26, 23, 20, 18), bold=True)
+        draw.text((14, top), price_text, font=price_font, fill=theme.TEXT)
+        widgets.draw_change(draw, 14, top + 30, snap.best_change_24h, font_size=13)
 
         if market.market_cap_rank is not None:
             fnt = theme.font(11, bold=True)
             text = f"RANK #{market.market_cap_rank}"
             width = theme.text_width(draw, text, fnt)
             draw.text(
-                (theme.SCREEN_WIDTH - 8 - width, 34),
+                (theme.SCREEN_WIDTH - 14 - width, top + 6),
                 text, font=fnt, fill=theme.ACCENT,
             )
 
@@ -60,13 +60,13 @@ class StatisticsScreen(Screen):
             )
             return
 
-        top = 80
+        top += 54
         draw.line(
-            [(8, top - 6), (theme.SCREEN_WIDTH - 8, top - 6)],
+            [(14, top - 6), (theme.SCREEN_WIDTH - 14, top - 6)],
             fill=theme.DIVIDER, width=1,
         )
 
-        rows_available = (theme.SCREEN_HEIGHT - top - 6) // BLOCK_HEIGHT
+        rows_available = (theme.CONTENT_BOTTOM - top + 4) // BLOCK_HEIGHT
         for index, (label, value, color) in enumerate(blocks[: rows_available * 2]):
             col = index % 2
             row = index // 2

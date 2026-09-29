@@ -1,15 +1,14 @@
 """Reusable drawing primitives shared by every screen.
 
-Arrows and status dots are drawn as geometry rather than glyphs so they
-render identically no matter which fonts the Pi image happens to ship.
+Arrows are drawn as geometry rather than glyphs so they render identically
+no matter which fonts the Pi image happens to ship. The status bar, footer
+hints and toasts are MFruit OS's, from mfruit_sdk (see app/ui/frame.py).
 """
 
 from __future__ import annotations
 
 from app.ui import theme
 from app.utils.format import format_percent
-
-HEADER_HEIGHT = 22
 
 
 def draw_arrow(draw, x: int, y: int, size: int, direction: int, color):
@@ -26,45 +25,6 @@ def draw_arrow(draw, x: int, y: int, size: int, direction: int, color):
     else:
         mid = y + size / 2.0
         draw.rectangle([x, mid - 1, x + size, mid + 1], fill=color)
-
-
-def draw_status_dot(draw, x: int, y: int, radius: int, online: bool):
-    """Filled dot when live, hollow ring when offline."""
-    box = [x - radius, y - radius, x + radius, y + radius]
-    if online:
-        draw.ellipse(box, fill=theme.LIVE)
-    else:
-        draw.ellipse(box, outline=theme.OFFLINE, width=2)
-
-
-def draw_header(draw, title: str, online: bool, refreshing: bool = False):
-    """Title on the left, connection state on the right."""
-    fnt = theme.font(13, bold=True)
-    draw.text((8, 4), title.upper(), font=fnt, fill=theme.TEXT)
-
-    if refreshing:
-        label, color = "SYNC", theme.WARN
-    elif online:
-        label, color = "LIVE", theme.LIVE
-    else:
-        label, color = "OFFLINE", theme.OFFLINE
-
-    small = theme.font(11, bold=True)
-    width = theme.text_width(draw, label, small)
-    right = theme.SCREEN_WIDTH - 8
-    draw.text((right - width, 6), label, font=small, fill=color)
-
-    dot_x = right - width - 10
-    if refreshing:
-        draw.ellipse([dot_x - 3, 8, dot_x + 3, 14], fill=theme.WARN)
-    else:
-        draw_status_dot(draw, dot_x, 11, 3, online)
-
-    draw.line(
-        [(0, HEADER_HEIGHT), (theme.SCREEN_WIDTH, HEADER_HEIGHT)],
-        fill=theme.DIVIDER,
-        width=1,
-    )
 
 
 def draw_change(draw, x: int, y: int, value, font_size: int = 16, bold: bool = True):
@@ -113,7 +73,7 @@ def draw_panel(draw, box, radius: int = 6, fill=theme.PANEL, outline=None):
 def draw_timeframe_strip(draw, y: int, timeframes, selected: str, height: int = 22):
     """Segmented control showing the active chart timeframe."""
     count = len(timeframes)
-    margin = 6
+    margin = 12
     usable = theme.SCREEN_WIDTH - margin * 2
     slot = usable / float(count)
 
@@ -143,13 +103,6 @@ def draw_timeframe_strip(draw, y: int, timeframes, selected: str, height: int = 
             )
 
 
-def draw_footer(draw, text: str, color=theme.TEXT_MUTED, y: int | None = None):
-    fnt = theme.font(10)
-    if y is None:
-        y = theme.SCREEN_HEIGHT - 13
-    draw.text((8, y), text, font=fnt, fill=color)
-
-
 def draw_progress_bar(draw, x: int, y: int, width: int, height: int, ratio: float,
                       color=theme.ACCENT, background=theme.PANEL_ALT):
     """Horizontal meter used by the System page."""
@@ -164,33 +117,3 @@ def draw_centered(draw, y: int, text: str, fnt, fill=theme.TEXT):
     width = theme.text_width(draw, text, fnt)
     draw.text(((theme.SCREEN_WIDTH - width) / 2.0, y), text, font=fnt, fill=fill)
     return width
-
-
-def draw_toast(draw, text: str, kind: str = "info"):
-    """Transient banner for refresh / error feedback.
-
-    Drawn last, over the page content, near the bottom where it covers
-    the least important part of every layout.
-    """
-    colors = {
-        "info": (theme.ACCENT, (26, 16, 4)),
-        "success": (theme.UP, (6, 26, 16)),
-        "error": (theme.ERROR, (30, 8, 10)),
-    }
-    accent, background = colors.get(kind, colors["info"])
-
-    fnt = theme.font(12, bold=True)
-    text_w = theme.text_width(draw, text, fnt)
-    height = 26
-    width = min(theme.SCREEN_WIDTH - 16, text_w + 26)
-    x0 = (theme.SCREEN_WIDTH - width) / 2.0
-    y0 = theme.SCREEN_HEIGHT - height - 30
-
-    draw_panel(
-        draw, [x0, y0, x0 + width, y0 + height],
-        radius=8, fill=background, outline=accent,
-    )
-    draw.text(
-        (x0 + (width - text_w) / 2.0, y0 + (height - 15) / 2.0),
-        text, font=fnt, fill=accent,
-    )

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import threading
 
+from mfruit_sdk.ui.rgb565 import to_rgb565
 from PIL import Image, ImageDraw
 
 from app.ui import theme
@@ -17,39 +18,9 @@ from app.utils.logger import get_logger
 
 log = get_logger("display")
 
-try:
-    import numpy as _np
-except ImportError:  # pragma: no cover - optional accelerator
-    _np = None
-
-
-def image_to_rgb565(image: Image.Image) -> bytes:
-    """Convert an RGB image to big-endian RGB565 bytes.
-
-    numpy does this ~10x faster; the pure-Python path keeps the app
-    working on a minimal image where numpy is not installed.
-    """
-    if _np is not None:
-        arr = _np.asarray(image.convert("RGB"), dtype=_np.uint16)
-        rgb565 = (
-            ((arr[:, :, 0] & 0xF8) << 8)
-            | ((arr[:, :, 1] & 0xFC) << 3)
-            | (arr[:, :, 2] >> 3)
-        )
-        return rgb565.astype(">u2").tobytes()
-
-    pixels = image.convert("RGB").tobytes()
-    out = bytearray(len(pixels) // 3 * 2)
-    for i in range(len(pixels) // 3):
-        offset = i * 3
-        value = (
-            ((pixels[offset] & 0xF8) << 8)
-            | ((pixels[offset + 1] & 0xFC) << 3)
-            | (pixels[offset + 2] >> 3)
-        )
-        out[i * 2] = (value >> 8) & 0xFF
-        out[i * 2 + 1] = value & 0xFF
-    return bytes(out)
+# MFruit App SDK's converter: per-channel lookup tables merged by Pillow,
+# ~11 ms per frame on a Pi Zero 2 W with no numpy import (~0.4 s, ~11 MB).
+image_to_rgb565 = to_rgb565
 
 
 class Display:

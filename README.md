@@ -1,23 +1,22 @@
 # Whisplay Bitcoin Market Dashboard
 
 A real-time cryptocurrency market dashboard for the **Raspberry Pi Zero 2 W + Whisplay HAT**,
-driven entirely by the HAT's **single physical button**. No touchscreen, no keyboard, no SSH.
+driven by the HAT's **single button** — or a **USB or Bluetooth keyboard**. No touchscreen, no SSH.
 
-It runs as a Whisplay **daemon app**: the `whisplay-daemon` service owns the LCD, backlight,
-RGB LED and button, and this app draws into the shared framebuffer it hands out.
+It is an **MFruit OS app**: it looks and handles like the rest of the device (MFruit OS status
+bar, footer hints, fonts and controls, from the vendored MFruit App SDK in `mfruit_sdk/`). It
+runs as a Whisplay **daemon app**: the `whisplay-daemon` service owns the LCD, backlight, RGB
+LED and button, and this app draws into the shared framebuffer it hands out.
 
 ```
-        BOOT                    1 CLICK                HOLD
-          |                        |                     |
-          v                        v                     v
-   +-------------+          next chart timeframe   next dashboard
-   |  BTC/USD    |          1H > 4H > 1D > 1W > 1Y page in the ring
-   |             |
-   | $112,540.32 |          3 CLICKS              4 CLICKS
-   |  +2.41%     |             |                     |
-   |    /\/\     |             v                     v
-   |  1H 4H 1D   |       force refresh         leave the app
-   +-------------+       (2 clicks = HOME)
+   +--------------------+
+   | BTC/USD   ● ≋  82% |   page name · data light · WiFi · battery
+   | $112,540.32        |
+   | ▲ +2.41%    H / L  |   tap / Down    next page
+   |      /\/\          |   2× / Up       previous page
+   |  1H 4H 1D 1W 1Y    |   hold / Enter  next timeframe (refresh on other pages)
+   | tap next  hold …   |   3× / R        refresh now
+   +--------------------+   4× / Esc      leave the app
 ```
 
 ---
@@ -93,48 +92,47 @@ mapping — see Controls below.)
 
 ## 3. Controls
 
-| Gesture | Action |
-|---|---|
-| **1 click** | Next chart timeframe (1H > 4H > 1D > 1W > 1Y) |
-| **hold** | Next page (Bitcoin > Market > Top > Statistics > System > Bitcoin) |
-| **2 clicks** | Return **HOME**, from any page |
-| **3 clicks** | Force an immediate refresh of every data source |
-| **4 clicks** | Leave the app, back to the Whisplay desktop |
+The controls are MFruit OS's, the same in every MFruit app and in the launcher itself
+(`mfruit_sdk.input.InputController`):
 
-### Why the app owns every gesture
+| Button | Keyboard | Action |
+|---|---|---|
+| **tap** | Down, Right, Tab | Next page (Bitcoin > Market > Top > Statistics > System > Bitcoin) |
+| **2×** | Up, Left | Previous page |
+| **hold, then release** | Enter | The page's action: next chart timeframe (1H > 4H > 1D > 1W > 1Y) on the Bitcoin page, refresh on the others |
+| **3×** | R | Refresh every data source now |
+| **4×** | Esc | Leave the app, back to MFruit OS |
+| | T | Next timeframe, from any page |
+| | H, Home, 1–5 | Bitcoin page; page 1–5 |
 
-The app registers with `exit_gesture: "none"`, so the daemon reserves nothing and all five
-gestures above are handled in-app.
+A hold only *arms* after `long_press_ms`: the footer changes to **release to …** and nothing
+happens until you let go. The footer always lists the gestures of the page you are on.
 
-This is required, not a preference. The daemon's own quad-click exit uses a **3-second**
-window, and stepping through `1H > 4H > 1D > 1W > 1Y` is exactly **four single clicks** — a
-user cycling briskly would be thrown out of the app mid-cycle. Handling exit in-app instead
-uses the much tighter `click_window_ms` (400 ms default), which draws a clean line:
+**Keyboard.** Plug in a USB keyboard or pair a Bluetooth one at any time; it is picked up within
+two seconds. Keys act only while the dashboard is on screen — typing into another app never
+reaches it.
 
-- clicks spaced **wider** than 400 ms are independent timeframe changes
-- clicks landing **inside** 400 ms of each other accumulate toward the exit gesture
+### Why the app owns every gesture and the Esc key
 
-So: click at a normal pace to browse timeframes; click four times rapidly to leave.
-
-The daemon's `app_exit_requested` is still honoured, so setting `exit_gesture` back to
-`"quad_click"` or `"long_press"` in `packaging/whisplay-crypto-dashboard.json` still works if
-you prefer a daemon-level exit. An external keyboard's `Esc` also still returns to the desktop.
+The app registers with `exit_gesture: "none"` and `disable_esc_exit_key: true` (and claims the
+Esc key again at start-up, because the Whisplay runtime client does not send that flag), so the
+daemon reserves nothing: four clicks and Esc are handled in-app and leave cleanly.
 
 Gesture timing is configurable in `config.yaml`:
 
 ```yaml
 button:
   debounce_ms: 75        # contact bounce filter
-  click_window_ms: 400   # window to collect further clicks
-  long_press_ms: 700     # at/over this, the press is not counted as a click
+  click_window_ms: 700   # window to collect further clicks
+  long_press_ms: 700     # a hold arms here and acts on release
 ```
 
 Four clicks fire **immediately** on the fourth release rather than waiting out the click
 window, so leaving the app feels instant. Debounce is applied to the press edge only — gating
 the release edge as well would swallow genuine short clicks, which are often only 30–60 ms long.
 
-Raise `click_window_ms` if you find yourself exiting by accident while cycling timeframes;
-lower it if single clicks feel sluggish (each one waits out the window before acting).
+Raise `click_window_ms` if quick taps split into separate page changes instead of forming 2×,
+3× or 4×; lower it if a tap feels sluggish (each one waits out the window before acting).
 
 **Tuning it from real data.** Every gesture is logged with the measured gap between clicks:
 
@@ -150,28 +148,31 @@ Measured on the HAT's button, two clearly separated clusters emerged:
 | Deliberate multi-click (double / quad) | **158–522 ms** |
 | Ordinary browsing clicks | **≥ 1214 ms** |
 
-`click_window_ms: 700` sits in the empty band between them, which is why it is the default.
-The original 400 ms was below the top of the deliberate cluster, so four intentional clicks
-kept registering as four separate timeframe changes. If multi-click gestures are not forming
+`click_window_ms: 700` sits in the empty band between them, which is why `config.yaml` uses it.
+400 ms was below the top of the deliberate cluster, so four intentional clicks kept
+registering as four separate taps. If multi-click gestures are not forming
 for you, read your own gaps out of the log and set the window between your two clusters.
 
 ---
 
 ## 4. The five pages
 
+Every page has the MFruit OS status bar: the page name, a data light (green live, amber
+refreshing, grey offline), WiFi and battery.
+
 **1. Bitcoin (HOME)** — price, 24h change, 24h high/low, auto-scaling chart, window change,
-volume, timeframe selector, last-update time.
+volume (or the last-update time while offline), timeframe selector.
 
 **2. Market Overview** — total market cap and its 24h change, total volume, BTC and ETH
 dominance, stablecoin cap, Fear & Greed index with meter, BTC/ETH quotes.
 
-**3. Top Cryptocurrencies** — top 5 by market cap: rank, symbol, market cap, price, 24h change.
+**3. Top Cryptocurrencies** — top 4 by market cap: rank, symbol, market cap, price, 24h change.
 
 **4. Bitcoin Statistics** — market cap, volume, 24h high/low, circulating and max supply,
 all-time high, distance from ATH, 7d and 30d change, market-cap rank.
 
 **5. System Status** — Wi-Fi / Internet / API checks, CPU, RAM, temperature, uptime, app
-memory, last update, and the last error message.
+memory, last update, mode, and the last error message.
 
 Any metric a provider does not return is **omitted entirely**. Nothing is faked or zero-filled.
 
@@ -256,14 +257,14 @@ The RGB LED reports state at a glance: **green** up, **red** down, **amber** off
 ```
 whisplay-crypto-dashboard/
 ├── app/
-│   ├── main.py              state machine, render loop, gesture routing
+│   ├── main.py              state machine, render loop, input actions
 │   ├── board.py             daemon/direct/headless hardware acquisition
 │   ├── ui/
 │   │   ├── display.py       PIL canvas -> RGB565 framebuffer
+│   │   ├── frame.py         a page inside the MFruit OS chrome (status bar, hints, toast)
 │   │   ├── theme.py         palette, fonts, text fitting
-│   │   ├── widgets.py       header, arrows, meters, toasts
+│   │   ├── widgets.py       arrows, meters, panels
 │   │   └── *_screen.py      the five pages
-│   ├── input/button.py      single/double/triple/quad gesture detection
 │   ├── market/
 │   │   ├── provider.py      interface + data models
 │   │   ├── binance.py  coingecko.py  alternative_me.py
@@ -273,7 +274,8 @@ whisplay-crypto-dashboard/
 │   ├── chart/renderer.py    hand-rolled chart
 │   ├── config/settings.py   defaults < config.yaml < environment
 │   └── utils/               logger, format, network, system
-├── tests/                   77 tests
+├── mfruit_sdk/              MFruit App SDK (vendored copy; see mfruit_sdk/VENDORED)
+├── tests/                   82 tests
 ├── tools/preview.py         render screens to PNG without hardware
 └── packaging/               systemd unit + daemon app manifest
 ```
@@ -284,7 +286,9 @@ whisplay-crypto-dashboard/
 |---|---|
 | `main` | Renders only. Never touches the network. |
 | `market-service` | All HTTP. Publishes immutable snapshots. |
-| `gesture-detector` | Button timing. |
+| `mfruit-gestures` | Button timing (MFruit App SDK). |
+| `mfruit-keys` | USB / Bluetooth keyboards; idle until one is plugged in. |
+| `mfruit-status` | WiFi level and battery for the status bar, every 10 s. |
 | `foreground-retry` | Only when another app holds the screen; exits once granted. |
 
 The render loop is **event-driven**: it sleeps on a condition variable until data changes, a
@@ -314,9 +318,9 @@ Pi Zero silicon):
 
 Recommendations:
 
-- **Install `python3-numpy`** — RGB565 conversion is roughly 10x faster. The app works without
-  it but burns noticeably more CPU per frame.
-- **Use apt, not pip**, for Pillow and numpy.
+- RGB565 conversion uses the MFruit App SDK's lookup-table converter (~11 ms per frame on a
+  Pi Zero 2 W); numpy is no longer needed.
+- **Use apt, not pip**, for Pillow.
 - Keep `fps` at 20 or below; it matches the daemon's own refresh and is a ceiling, not a target.
 - Do not lower `price_seconds` below ~5 s. It adds load and risks provider rate limits.
 - Leave `cache_enabled: true`. Cache writes are throttled (30 s minimum) and atomic to limit
@@ -369,10 +373,11 @@ Boot sequence: `Pi > Wi-Fi > whisplay-daemon > run.sh waits for socket > dashboa
 |---|---|
 | Blank screen, app appears to run | Check the mode on the System page. `WAITING` means another app owns the foreground — exit that app and this one appears within 5s. `HEADLESS` means the Whisplay runtime was not found — set `WHISPLAY_RUNTIME=/path/to/Whisplay/runtime`. |
 | Log says `foreground unavailable ... retrying` | Expected. Another Whisplay app holds the screen; the dashboard takes over when that app exits. |
-| Four clicks exit, then the app comes straight back | The unit is set to `Restart=always`. Change it to `Restart=on-failure` (the shipped default). |
+| Four clicks (or Esc) exit, then the app comes straight back | The unit is set to `Restart=always`. Change it to `Restart=on-failure` (the shipped default). |
 | `whisplay runtime is unusable: No module named 'spidev'` | Whisplay drivers not installed. Run `Whisplay/install_driver.sh` and reboot. |
 | App not on the Whisplay desktop | `ls ~/.whisplay-daemon/app/` should list `whisplay-crypto-dashboard.json`. Re-run `./install.sh`, then restart the daemon. |
-| App exits while cycling timeframes | Four clicks inside the click window is the exit gesture. Click at a slower pace, or raise `click_window_ms` in `config.yaml`. |
+| App exits while stepping through pages | Four taps inside the click window is the exit gesture. Tap at a slower pace, or lower `click_window_ms` in `config.yaml`. |
+| Keyboard does nothing | Keys act only while the dashboard is on screen. Check the log for `keyboard connected: eventN`; the user running the app must be in the `input` group. |
 | Holding the button exits instead of changing page | `exit_gesture` is not `none`. Confirm it in `~/.whisplay-daemon/app/whisplay-crypto-dashboard.json`, re-run `./install.sh`, and restart the daemon. |
 | Clicks register as the wrong count | Tune `click_window_ms` (raise to 500 for slower clicking) and `debounce_ms` in `config.yaml`. |
 | `OFFLINE` but the Pi has Internet | Check the System page's last error. A CoinGecko `429` is rate limiting — it backs off automatically; increase `market_seconds`/`top_seconds` if persistent. |
@@ -395,13 +400,20 @@ python3 -c "import socket,json;s=socket.socket(socket.AF_UNIX);s.connect('/tmp/w
 ## 12. Development
 
 ```bash
-python3 -m pytest tests/ -q          # 77 tests, no hardware needed
+python3 -m pytest tests/ -q          # 82 tests, no hardware needed
 python3 tools/preview.py --mock      # render all five screens to PNG
 python3 tools/preview.py             # ...with live market data
 ```
 
 `tools/preview.py` writes each screen plus a contact sheet to `/tmp/whisplay-preview`, which
-makes layout work possible without deploying to the Pi.
+makes layout work possible without deploying to the Pi. Set
+`MFRUIT_FONT_DIR=~/MFruitOS/assets/fonts` to preview with MFruit OS's font on a machine without
+MFruit OS installed.
+
+**MFruit App SDK.** `mfruit_sdk/` is a copy of MFruit OS's `mfruitos/sdk`: do not edit it
+here. Change it in MFruit OS, then run `~/MFruitOS/scripts/sdk-sync.sh ~/whisplay-crypto-dashboard`
+(`--check` reports a stale copy). The app's rules for MFruit OS are in
+`.claude/rules/mfruit-os-app.md`.
 
 ---
 

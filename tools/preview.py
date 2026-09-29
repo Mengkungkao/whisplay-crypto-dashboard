@@ -12,7 +12,6 @@ change before deploying to the Pi.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -30,10 +29,13 @@ from app.market.provider import (
     PriceQuote,
 )
 from app.market.service import MarketService, MarketSnapshot
+from mfruit_sdk.status import Status
+
 from app.ui import theme
 from app.ui.base import RenderContext
 from app.ui.bitcoin_screen import BitcoinScreen
 from app.ui.crypto_screen import CryptoScreen
+from app.ui.frame import compose
 from app.ui.market_screen import MarketScreen
 from app.ui.statistics_screen import StatisticsScreen
 from app.ui.system_screen import SystemScreen
@@ -131,13 +133,13 @@ def main():
         board_mode="preview",
     )
 
-    from PIL import Image, ImageDraw
+    from PIL import Image
 
+    # Sample status-bar values, so the preview shows the full MFruit OS chrome.
+    status = Status(wifi_level=0 if args.offline else 3, battery=82, charging=False)
     for index, (name, screen) in enumerate(SCREENS):
         ctx.page_index = index
-        image = Image.new("RGB", (theme.SCREEN_WIDTH, theme.SCREEN_HEIGHT), theme.BG)
-        draw = ImageDraw.Draw(image)
-        screen.render(draw, ctx)
+        image = compose(screen, ctx, status)
         path = out_dir / f"{name}.png"
         image.save(path)
         print(f"  wrote {path}")

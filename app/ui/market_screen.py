@@ -16,33 +16,31 @@ FNG_LABEL_MAX = 12
 
 class MarketScreen(Screen):
     name = "market"
-    title = "MARKET"
+    title = "Market"
 
     def render(self, draw, ctx):
         snap = ctx.snapshot
         settings = ctx.settings
         gd = snap.global_data
 
-        widgets.draw_header(draw, "MARKET", snap.online, refreshing=snap.refreshing)
-
-        y = 30
+        y = theme.CONTENT_TOP
 
         # --- headline: total market cap ----------------------------------
         if gd.total_market_cap is not None:
             draw.text(
-                (8, y), "TOTAL MARKET CAP",
+                (14, y), "TOTAL MARKET CAP",
                 font=theme.font(10, bold=True), fill=theme.TEXT_MUTED,
             )
             cap_text = format_compact(gd.total_market_cap, settings.currency)
             cap_font = theme.fit_font(draw, cap_text, 150, (30, 26, 23, 20), bold=True)
-            draw.text((8, y + 13), cap_text, font=cap_font, fill=theme.TEXT)
+            draw.text((14, y + 13), cap_text, font=cap_font, fill=theme.TEXT)
 
             if gd.market_cap_change_24h_pct is not None:
                 widgets.draw_change(
-                    draw, 8 + theme.text_width(draw, cap_text, cap_font) + 10,
+                    draw, 14 + theme.text_width(draw, cap_text, cap_font) + 10,
                     y + 22, gd.market_cap_change_24h_pct, font_size=13,
                 )
-            y += 50
+            y += 48
         else:
             y += 4
 
@@ -57,22 +55,22 @@ class MarketScreen(Screen):
         if gd.stablecoin_market_cap is not None:
             pairs.append(("STABLECOINS", format_compact(gd.stablecoin_market_cap, settings.currency), theme.TEXT))
 
-        column_x = (8, 126)
-        for index, (label, value, color) in enumerate(pairs[:6]):
+        column_x = (14, 126)
+        for index, (label, value, color) in enumerate(pairs[:4]):
             col = index % 2
             row = index // 2
             widgets.draw_label_value(
-                draw, column_x[col], y + row * 36, label, value,
-                value_color=color, label_size=10, value_size=16,
+                draw, column_x[col], y + row * 32, label, value,
+                value_color=color, label_size=10, value_size=15,
             )
         if pairs:
-            y += ((len(pairs[:6]) + 1) // 2) * 36 + 4
+            y += ((len(pairs[:4]) + 1) // 2) * 32 + 2
 
         # --- fear & greed --------------------------------------------------
         fng = snap.fear_greed
         if fng.value is not None:
             self._draw_fear_greed(draw, y, fng)
-            y += 44
+            y += 42
 
         # --- BTC / ETH quick quotes ----------------------------------------
         self._draw_coin_rows(draw, y, ctx)
@@ -89,35 +87,35 @@ class MarketScreen(Screen):
     def _draw_fear_greed(self, draw, y, fng):
         color = theme.fear_greed_color(fng.value)
         draw.text(
-            (8, y), "FEAR / GREED",
+            (14, y), "FEAR / GREED",
             font=theme.font(10, bold=True), fill=theme.TEXT_MUTED,
         )
         value_font = theme.font(20, bold=True)
-        draw.text((8, y + 13), str(fng.value), font=value_font, fill=color)
+        draw.text((14, y + 13), str(fng.value), font=value_font, fill=color)
 
         label = (fng.classification or "")[:FNG_LABEL_MAX]
         draw.text(
-            (8 + theme.text_width(draw, str(fng.value), value_font) + 8, y + 19),
+            (14 + theme.text_width(draw, str(fng.value), value_font) + 8, y + 19),
             label, font=theme.font(12, bold=True), fill=color,
         )
 
         # 0-100 meter
         widgets.draw_progress_bar(
-            draw, 8, y + 37, theme.SCREEN_WIDTH - 16, 5,
+            draw, 14, y + 35, theme.SCREEN_WIDTH - 28, 5,
             (fng.value or 0) / 100.0, color=color,
         )
 
     def _draw_coin_rows(self, draw, y, ctx):
         """BTC and ETH spot quotes, from the top-coins table."""
         snap = ctx.snapshot
-        if y > theme.SCREEN_HEIGHT - 34:
+        if y > theme.CONTENT_BOTTOM - 16:
             return
 
         wanted = ("BTC", "ETH")
         rows = [coin for coin in snap.top if coin.symbol in wanted]
         if not rows and snap.best_price is not None:
             fnt = theme.font(12, bold=True)
-            draw.text((8, y), ctx.settings.symbol, font=fnt, fill=theme.ACCENT)
+            draw.text((14, y), ctx.settings.symbol, font=fnt, fill=theme.ACCENT)
             draw.text(
                 (46, y), format_price(snap.best_price, ctx.settings.currency),
                 font=fnt, fill=theme.TEXT,
@@ -127,11 +125,11 @@ class MarketScreen(Screen):
 
         for index, coin in enumerate(rows[:2]):
             row_y = y + index * 20
-            if row_y > theme.SCREEN_HEIGHT - 16:
+            if row_y > theme.CONTENT_BOTTOM - 16:
                 break
             fnt = theme.font(12, bold=True)
             color = theme.ACCENT if coin.symbol == "BTC" else theme.TEXT_DIM
-            draw.text((8, row_y), coin.symbol, font=fnt, fill=color)
+            draw.text((14, row_y), coin.symbol, font=fnt, fill=color)
             draw.text(
                 (46, row_y), format_price(coin.price, ctx.settings.currency),
                 font=fnt, fill=theme.TEXT,

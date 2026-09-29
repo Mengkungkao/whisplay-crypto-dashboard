@@ -1,81 +1,59 @@
 """Colour palette, fonts and text helpers for the 240x280 panel.
 
+The chrome (status bar, footer hints, toasts, background) follows MFruit OS
+through the vendored MFruit App SDK (mfruit_sdk/), so the dashboard looks
+like the rest of the device. Inside the content area Bitcoin orange stays
+the accent, so the device still reads as a dedicated BTC instrument.
+
 Design rules, in priority order: large readable numbers, high contrast,
-minimal text, clear hierarchy. Bitcoin orange is the accent so the
-device reads as a dedicated BTC instrument rather than a generic dash.
+minimal text, clear hierarchy.
 """
 
 from __future__ import annotations
 
-import os
+from mfruit_sdk.ui import fonts as _fonts
+from mfruit_sdk.ui import theme as _mfruit
 
-from PIL import ImageFont
+SCREEN_WIDTH = _mfruit.SCREEN_W
+SCREEN_HEIGHT = _mfruit.SCREEN_H
 
-SCREEN_WIDTH = 240
-SCREEN_HEIGHT = 280
+# Content lives between MFruit OS's status bar and footer.
+CONTENT_TOP = _mfruit.CONTENT_TOP
+CONTENT_BOTTOM = _mfruit.CONTENT_BOTTOM
+
+MFRUIT = _mfruit.DARK
 
 # --- palette (RGB) ----------------------------------------------------
-BG = (8, 10, 16)
-PANEL = (19, 23, 33)
-PANEL_ALT = (26, 31, 44)
-GRID = (34, 40, 55)
-DIVIDER = (40, 47, 64)
+BG = MFRUIT.bg
+PANEL = MFRUIT.surface
+PANEL_ALT = MFRUIT.surface_hi
+GRID = (34, 40, 52)
+DIVIDER = MFRUIT.separator
 
-TEXT = (237, 241, 249)
-TEXT_DIM = (166, 176, 196)
-TEXT_MUTED = (110, 120, 142)
+TEXT = MFRUIT.text
+TEXT_DIM = MFRUIT.text_muted
+TEXT_MUTED = (118, 126, 140)
 
 ACCENT = (247, 147, 26)        # Bitcoin orange
 ACCENT_DIM = (139, 86, 24)
 
-UP = (38, 209, 125)
-DOWN = (241, 78, 90)
+UP = MFRUIT.success
+DOWN = MFRUIT.error
 FLAT = (150, 158, 178)
 
-LIVE = (46, 214, 130)
-OFFLINE = (154, 162, 184)
-WARN = (245, 183, 66)
-ERROR = (241, 78, 90)
+LIVE = MFRUIT.success
+OFFLINE = MFRUIT.text_muted
+WARN = MFRUIT.warning
+ERROR = MFRUIT.error
 
-FEAR = (241, 78, 90)
-NEUTRAL = (245, 183, 66)
-GREED = (38, 209, 125)
-
-_FONT_CANDIDATES = {
-    False: (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    ),
-    True: (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-    ),
-}
-
-_font_cache: dict = {}
+FEAR = MFRUIT.error
+NEUTRAL = MFRUIT.warning
+GREED = MFRUIT.success
 
 
 def font(size: int, bold: bool = False):
-    """Return a cached TrueType font, falling back to PIL's default."""
-    key = (int(size), bool(bold))
-    cached = _font_cache.get(key)
-    if cached is not None:
-        return cached
-
-    for path in _FONT_CANDIDATES[bool(bold)]:
-        if os.path.exists(path):
-            try:
-                loaded = ImageFont.truetype(path, size=int(size))
-                _font_cache[key] = loaded
-                return loaded
-            except OSError:
-                continue
-
-    loaded = ImageFont.load_default()
-    _font_cache[key] = loaded
-    return loaded
+    """MFruit OS's font (Inter, or DejaVu where MFruit OS is not installed)."""
+    return _fonts.font(int(size), "bold" if bold else "regular")
 
 
 def text_size(draw, text: str, fnt) -> tuple:

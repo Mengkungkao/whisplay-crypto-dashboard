@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 """Whisplay Bitcoin Market Dashboard -- application entry point.
 
-State machine
--------------
-Five pages in a ring, advanced by holding the button:
+Controls
+--------
+Five pages in a ring. The controls are MFruit OS's, the same in every app
+(mfruit_sdk.input.InputController reads the button and any USB or
+Bluetooth keyboard):
 
     HOME (Bitcoin) -> MARKET -> TOP CRYPTO -> STATISTICS -> SYSTEM -+
       ^                                                             |
       +-------------------------------------------------------------+
 
-    single  next chart timeframe (1H -> 4H -> 1D -> 1W -> 1Y)
-    hold    next page
-    double  return HOME
-    triple  force an immediate data refresh
-    quad    leave the app (back to the Whisplay desktop)
+    button            keyboard           action
+    tap               Down / Right / Tab next page
+    2x                Up / Left          previous page
+    hold, release     Enter              the page's action: next chart
+                                         timeframe on Bitcoin, refresh
+                                         elsewhere
+    3x                R                  refresh now
+    4x                Esc                leave the app
+                      T                  next timeframe
+                      H / Home, 1-5      Bitcoin page / page 1-5
 
-The app registers with exit_gesture "none", so it owns every gesture and
-performs its own exit on four clicks. See app/board.py for why the
-daemon's own quad-click exit cannot be used with this mapping.
+The app registers with exit_gesture "none" and claims the Esc key, so it
+owns every gesture and key and performs its own exit.
 
 Threading
 ---------
@@ -25,7 +31,9 @@ Three threads, each with one job:
 
     main             render only; never touches the network
     market-service   all HTTP; publishes immutable snapshots
-    gesture-detector button timing
+    mfruit-gestures  button timing          (mfruit_sdk)
+    mfruit-keys      USB / Bluetooth keys   (mfruit_sdk)
+    mfruit-status    WiFi and battery       (mfruit_sdk)
 
 The render loop is event-driven: it sleeps on a condition until data
 changes, a button is pressed, or the status tick expires. Idle cost is
@@ -44,16 +52,20 @@ from pathlib import Path
 # Allow `python3 app/main.py` as well as `python3 -m app.main`.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.board import acquire_board
+from mfruit_sdk.daemon import own_escape_key
+from mfruit_sdk.input import (BACK, CHAR, EXTRA, KEY, NEXT, PREVIOUS, SELECT,
+                              InputController)
+from mfruit_sdk.status import StatusMonitor
+
+from app.board import APP_ID, acquire_board
 from app.config.settings import load_settings
-from app.input.button import DOUBLE, LONG_PRESS, QUAD, SINGLE, TRIPLE, GestureDetector
 from app.market.cache import AppState, MarketCache
 from app.market.service import MarketService
-from app.ui import theme, widgets
 from app.ui.base import RenderContext
 from app.ui.bitcoin_screen import BitcoinScreen
 from app.ui.crypto_screen import CryptoScreen
 from app.ui.display import Display
+from app.ui.frame import compose
 from app.ui.market_screen import MarketScreen
 from app.ui.statistics_screen import StatisticsScreen
 from app.ui.system_screen import SystemScreen
@@ -120,13 +132,17 @@ class DashboardApp:
         self.system_monitor = SystemMonitor(self.settings.refresh["system_seconds"])
         self.connectivity = ConnectivityMonitor()
 
-        # --- input -----------------------------------------------------
-        self.gestures = GestureDetector(
-            self.handle_gesture,
+        # --- input: the button and any USB / Bluetooth keyboard ----------
+        self.armed = False
+        self.input = InputController(
+            self.handle_action,
+            active=self._owns_screen,
+            on_armed=self._on_armed,
             debounce_ms=self.settings.button["debounce_ms"],
             click_window_ms=self.settings.button["click_window_ms"],
             long_press_ms=self.settings.button["long_press_ms"],
         )
+        self.status = StatusMonitor(on_change=lambda _status: self.mark_dirty())
 
         # --- screens ---------------------------------------------------
         self.screens = [
@@ -163,44 +179,75 @@ class DashboardApp:
         self._toast_until = time.monotonic() + seconds
         self.mark_dirty()
 
-    # --- gestures -------------------------------------------------------
-    def handle_gesture(self, gesture: str):
-        if gesture == SINGLE:
-            self.cycle_timeframe()
-        elif gesture == LONG_PRESS:
-            self.next_page()
-        elif gesture == DOUBLE:
-            self.go_home()
-        elif gesture == TRIPLE:
-            self.force_refresh()
-        elif gesture == QUAD:
-            self.request_exit()
+    # --- input -----------------------------------------------------------
+    def _owns_screen(self) -> bool:
+        # The keyboard is shared with every other app: act on keys only
+        # while the dashboard is the one on screen.
+        return bool(getattr(self.board, "foreground_ready", True))
 
-    def next_page(self):
-        self.page_index = (self.page_index + 1) % len(self.screens)
+    def _on_armed(self, armed: bool):
+        """A hold passed the threshold: the footer says what releasing does."""
+        self.armed = armed
+        self.mark_dirty()
+
+    def handle_action(self, action):
+        name = action.name
+        if name == NEXT:
+            self.next_page()
+        elif name == PREVIOUS:
+            self.previous_page()
+        elif name == SELECT:
+            self.page_action()
+        elif name == EXTRA:
+            self.force_refresh()
+        elif name == BACK:
+            self.request_exit()
+        elif name == KEY and action.key == "home":
+            self.go_home()
+        elif name == CHAR:
+            self.handle_char(action.char.lower())
+
+    def handle_char(self, char: str):
+        if char == "r":
+            self.force_refresh()
+        elif char == "t":
+            self.cycle_timeframe()
+        elif char == "h":
+            self.go_home()
+        elif char.isdigit() and 1 <= int(char) <= len(self.screens):
+            self.go_to(int(char) - 1)
+
+    def page_action(self):
+        """Hold (or Enter): the chart page changes timeframe, others refresh."""
+        if self.screens[self.page_index].select_label == "timeframe":
+            self.cycle_timeframe()
+        else:
+            self.force_refresh()
+
+    def go_to(self, index: int):
+        self.page_index = index % len(self.screens)
         log.info("screen -> %s", self.screens[self.page_index].name)
         self.mark_dirty()
 
+    def next_page(self):
+        self.go_to(self.page_index + 1)
+
+    def previous_page(self):
+        self.go_to(self.page_index - 1)
+
     def go_home(self):
-        if self.page_index != HOME_INDEX:
-            log.info("screen -> home")
-        self.page_index = HOME_INDEX
-        self.show_toast("HOME", "info", 1.2)
+        self.go_to(HOME_INDEX)
 
     def cycle_timeframe(self):
-        """Single click. Deliberately does NOT change page.
-
-        Single click is now the most frequent gesture, so jumping to the
-        chart would make every other page impossible to sit on.
-        """
+        """Hold on the chart page, or T. Deliberately does NOT change page."""
         timeframe = self.service.next_timeframe()
         self.state.set("timeframe", timeframe)
-        self.show_toast(f"TIMEFRAME  {timeframe}", "info", 1.5)
+        self.show_toast(f"Timeframe {timeframe}", "info", 1.5)
 
     def request_exit(self):
-        """Four clicks. Leave the app and hand the screen back."""
-        log.info("exit requested by quad click")
-        self.show_toast("EXITING", "info", 1.0)
+        """Four clicks or Esc. Leave the app and hand the screen back."""
+        log.info("exit requested (4 clicks / Esc)")
+        self.show_toast("Exiting", "info", 1.0)
         try:
             self.render_frame()      # let the toast actually appear
         except Exception:
@@ -210,7 +257,7 @@ class DashboardApp:
 
     def force_refresh(self):
         self.service.request_refresh()
-        self.show_toast("REFRESHING...", "info", 6.0)
+        self.show_toast("Refreshing…", "info", 6.0)
 
     # --- daemon lifecycle -----------------------------------------------
     def handle_exit_request(self, *_args):
@@ -221,6 +268,7 @@ class DashboardApp:
     def handle_focus_revoked(self, *_args):
         # The framebuffer is invalid from this moment on: stop drawing.
         log.warning("focus revoked by daemon; stopping render")
+        self.input.reset()
         self._running = False
         self.mark_dirty()
 
@@ -256,9 +304,9 @@ class DashboardApp:
         # A finished manual refresh reports its outcome.
         if self._was_refreshing and not snapshot.refreshing:
             if snapshot.online:
-                self.show_toast("UPDATED", "success", 2.0)
+                self.show_toast("Updated", "success", 2.0)
             else:
-                self.show_toast("NETWORK ERROR", "error", 3.0)
+                self.show_toast("Network error", "error", 3.0)
         self._was_refreshing = snapshot.refreshing
 
         if snapshot.online != self._last_online:
@@ -282,23 +330,8 @@ class DashboardApp:
             board_mode=self.board_mode,
         )
 
-        image, draw = self.display.new_canvas()
-        screen = self.screens[self.page_index]
-        try:
-            screen.render(draw, ctx)
-        except Exception:
-            # One broken screen must never take the whole device down.
-            log.exception("screen %s failed to render", screen.name)
-            widgets.draw_centered(
-                draw, 130, "RENDER ERROR", theme.font(14, bold=True), fill=theme.ERROR
-            )
-            widgets.draw_centered(
-                draw, 152, screen.name.upper(), theme.font(11), fill=theme.TEXT_MUTED
-            )
-
-        if toast:
-            widgets.draw_toast(draw, toast, self._toast_kind)
-
+        image = compose(self.screens[self.page_index], ctx, self.status.sample(),
+                        armed=self.armed)
         self.display.present(image)
         self.update_led(snapshot)
 
@@ -312,8 +345,11 @@ class DashboardApp:
 
     def run(self):
         self.wire_daemon_callbacks()
-        self.gestures.attach(self.board)
-        self.gestures.start()
+        if self.board_mode in ("daemon", "waiting"):
+            own_escape_key(APP_ID)      # Esc is "leave" here, handled by the app
+        self.input.attach(self.board)
+        self.input.start()
+        self.status.start()
         self.service.start()
 
         log.info(
@@ -321,8 +357,8 @@ class DashboardApp:
             self.board_mode, self.service.timeframe, len(self.screens),
         )
         log.info(
-            "controls: 1 click=timeframe, hold=next page, "
-            "2 clicks=home, 3 clicks=refresh, 4 clicks=exit"
+            "controls: tap/Down=next page, 2x/Up=previous, hold/Enter=page action, "
+            "3x/R=refresh, 4x/Esc=exit, T=timeframe"
         )
 
         frame_interval = 1.0 / self.settings.fps
@@ -352,9 +388,10 @@ class DashboardApp:
         log.info("shutting down")
         self._running = False
         try:
-            self.gestures.stop()
+            self.input.stop()
+            self.status.stop()
         except Exception:
-            log.debug("gesture stop failed", exc_info=True)
+            log.debug("input stop failed", exc_info=True)
         try:
             self.service.stop()
         except Exception:

@@ -35,8 +35,9 @@ ICON = "BTC"
 # timeframe changes, clicks inside it count toward exit.
 #
 # The daemon's app_exit_requested is still honoured, so setting this back
-# to "quad_click" or "long_press" keeps working. An external keyboard's
-# ESC also still returns to the desktop (disable_esc_exit_key is false).
+# to "quad_click" or "long_press" keeps working. The Esc key is the app's
+# too: main.py claims it (mfruit_sdk.daemon.own_escape_key) and leaves on
+# Esc itself, like every MFruit app.
 EXIT_GESTURE = "none"
 PRIORITY = 40
 

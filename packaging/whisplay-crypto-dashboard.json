@@ -9,5 +9,5 @@
   "priority": 40,
   "use_daemon_default_log": true,
   "persist": true,
-  "disable_esc_exit_key": false
+  "disable_esc_exit_key": true
 }

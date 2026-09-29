@@ -208,3 +208,30 @@ def test_boards_without_the_flag_draw_normally(settings):
     display = Display(board, settings)
     assert display.present(Image.new("RGB", (240, 280), theme.BG)) is True
     assert board.writes == 1
+
+
+@pytest.mark.parametrize("screen", ALL_SCREENS, ids=lambda s: s.name)
+def test_frame_has_mfruit_os_chrome(settings, screen, sample_snapshot):
+    """Page name, WiFi and battery on top; the page's gestures at the bottom."""
+    from mfruit_sdk.status import Status
+
+    from app.ui.frame import compose, hints
+
+    image = compose(screen, make_ctx(settings, sample_snapshot), Status(3, 82, False))
+    assert image.size == (theme.SCREEN_WIDTH, theme.SCREEN_HEIGHT)
+    status_bar = image.crop((0, 0, theme.SCREEN_WIDTH, theme.CONTENT_TOP - 8))
+    footer = image.crop((0, 252, theme.SCREEN_WIDTH, 272))
+    assert len(status_bar.getcolors(10000)) > 5
+    assert len(footer.getcolors(10000)) > 5
+    assert hints(screen)[0] == ("tap", "next")
+    assert hints(screen, armed=True) == [("release", f"to {screen.select_label}")]
+
+
+def test_content_stays_between_status_bar_and_footer(settings, sample_snapshot):
+    """Pages draw nothing over the status bar or the footer hints."""
+    for screen in ALL_SCREENS:
+        image = render(screen, make_ctx(settings, sample_snapshot))
+        for box in ((0, 0, theme.SCREEN_WIDTH, theme.CONTENT_TOP - 2),
+                    (0, theme.CONTENT_BOTTOM + 1, theme.SCREEN_WIDTH, theme.SCREEN_HEIGHT)):
+            assert image.crop(box).getcolors() == [
+                ((box[2] - box[0]) * (box[3] - box[1]), theme.BG)], (screen.name, box)

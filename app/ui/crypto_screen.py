@@ -12,20 +12,16 @@ from app.utils.format import format_compact, format_price
 
 ROW_HEIGHT = 44
 ROW_GAP = 4
-FIRST_ROW_Y = 30
+FIRST_ROW_Y = theme.CONTENT_TOP
 
 
 class CryptoScreen(Screen):
     name = "top"
-    title = "TOP MARKET CAP"
+    title = "Top Crypto"
 
     def render(self, draw, ctx):
         snap = ctx.snapshot
         settings = ctx.settings
-
-        widgets.draw_header(
-            draw, "TOP MARKET CAP", snap.online, refreshing=snap.refreshing
-        )
 
         coins = list(snap.top)[: settings.top_count]
         if not coins:
@@ -38,7 +34,7 @@ class CryptoScreen(Screen):
             return
 
         # Fit the available vertical space rather than overflowing.
-        available = theme.SCREEN_HEIGHT - FIRST_ROW_Y - 6
+        available = theme.CONTENT_BOTTOM - FIRST_ROW_Y + ROW_GAP
         max_rows = max(1, available // (ROW_HEIGHT + ROW_GAP))
         coins = coins[:max_rows]
 
@@ -48,26 +44,26 @@ class CryptoScreen(Screen):
 
     def _draw_row(self, draw, y, index, coin, settings):
         widgets.draw_panel(
-            draw, [6, y, theme.SCREEN_WIDTH - 6, y + ROW_HEIGHT],
-            radius=6, fill=theme.PANEL,
+            draw, [10, y, theme.SCREEN_WIDTH - 10, y + ROW_HEIGHT],
+            radius=12, fill=theme.PANEL,
         )
 
         rank = coin.rank if coin.rank is not None else index + 1
         draw.text(
-            (14, y + 7), str(rank),
+            (20, y + 7), str(rank),
             font=theme.font(11, bold=True), fill=theme.TEXT_MUTED,
         )
 
         # Bitcoin keeps the accent colour; everything else is neutral.
         symbol_color = theme.ACCENT if coin.symbol == settings.symbol else theme.TEXT
         draw.text(
-            (32, y + 5), coin.symbol,
+            (38, y + 5), coin.symbol,
             font=theme.font(15, bold=True), fill=symbol_color,
         )
 
         if coin.market_cap is not None:
             draw.text(
-                (32, y + 24), format_compact(coin.market_cap, settings.currency),
+                (38, y + 24), format_compact(coin.market_cap, settings.currency),
                 font=theme.font(10, bold=True), fill=theme.TEXT_MUTED,
             )
 
@@ -75,7 +71,7 @@ class CryptoScreen(Screen):
         price_font = theme.fit_font(draw, price_text, 120, (15, 14, 12, 11), bold=True)
         price_width = theme.text_width(draw, price_text, price_font)
         draw.text(
-            (theme.SCREEN_WIDTH - 14 - price_width, y + 6),
+            (theme.SCREEN_WIDTH - 20 - price_width, y + 6),
             price_text, font=price_font, fill=theme.TEXT,
         )
 
@@ -89,6 +85,6 @@ class CryptoScreen(Screen):
             draw, change_text, theme.font(change_font_size, bold=True)
         )
         widgets.draw_change(
-            draw, theme.SCREEN_WIDTH - 14 - change_width, y + 25,
+            draw, theme.SCREEN_WIDTH - 20 - change_width, y + 25,
             coin.change_24h_pct, font_size=change_font_size,
         )

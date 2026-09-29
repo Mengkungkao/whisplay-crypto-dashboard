@@ -30,7 +30,11 @@ class Screen:
     """A single dashboard page."""
 
     name = "screen"
-    title = "SCREEN"
+    title = "Screen"            # page name in the MFruit OS status bar
+    select_label = "refresh"    # what holding the button (or Enter) does here
+
+    def title_for(self, ctx: RenderContext) -> str:
+        return self.title
 
     def render(self, draw, ctx: RenderContext):
         raise NotImplementedError
