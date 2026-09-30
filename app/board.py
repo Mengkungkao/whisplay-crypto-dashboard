@@ -16,6 +16,8 @@ import threading
 import time
 from pathlib import Path
 
+from mfruit_sdk.daemon import own_escape_key
+
 from app.utils.logger import get_logger
 
 log = get_logger("board")
@@ -36,8 +38,8 @@ ICON = "BTC"
 #
 # The daemon's app_exit_requested is still honoured, so setting this back
 # to "quad_click" or "long_press" keeps working. The Esc key is the app's
-# too: main.py claims it (mfruit_sdk.daemon.own_escape_key) and leaves on
-# Esc itself, like every MFruit app.
+# too: acquire_board claims it (mfruit_sdk.daemon.own_escape_key) and the
+# app leaves on Esc itself, like every MFruit app.
 EXIT_GESTURE = "none"
 PRIORITY = 40
 
@@ -214,6 +216,10 @@ def acquire_board(
     except Exception:
         log.exception("daemon registration failed; running headless")
         return NullBoard(), "headless"
+    # Esc is this app's "back" (MFruit OS controls). Claimed now, before
+    # taking the screen: every registration makes the daemon redraw its
+    # desktop, which would flash over our first frame.
+    own_escape_key(APP_ID)
 
     try:
         proxy.acquire_foreground()

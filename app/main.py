@@ -52,12 +52,11 @@ from pathlib import Path
 # Allow `python3 app/main.py` as well as `python3 -m app.main`.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from mfruit_sdk.daemon import own_escape_key
 from mfruit_sdk.input import (BACK, CHAR, EXTRA, KEY, NEXT, PREVIOUS, SELECT,
                               InputController)
 from mfruit_sdk.status import StatusMonitor
 
-from app.board import APP_ID, acquire_board
+from app.board import acquire_board
 from app.config.settings import load_settings
 from app.market.cache import AppState, MarketCache
 from app.market.service import MarketService
@@ -345,8 +344,6 @@ class DashboardApp:
 
     def run(self):
         self.wire_daemon_callbacks()
-        if self.board_mode in ("daemon", "waiting"):
-            own_escape_key(APP_ID)      # Esc is "leave" here, handled by the app
         self.input.attach(self.board)
         self.input.start()
         self.status.start()
