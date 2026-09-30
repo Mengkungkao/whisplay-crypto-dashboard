@@ -449,3 +449,9 @@ Follows the license of the parent Whisplay project.
 Managed launches preserve MFruit OS's launch wrapper and logging registration;
 standalone launches still register themselves. `tests/test_board_registration.py`
 covers both native packages and adopted checkouts.
+
+## MFruit OS 1.4.0 keyboard compatibility
+
+Vendored SDK 1.2.0 reads keys from MFruit OS's foreground key hub while the
+launcher holds keyboards exclusively. Standalone use falls back to evdev.
+Deploy this SDK with MFruit OS 1.4.0 so keyboard input continues to work.
