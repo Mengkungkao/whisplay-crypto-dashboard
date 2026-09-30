@@ -28,13 +28,10 @@ ICON = "BTC"
 
 # The app owns every button gesture.
 #
-# Long press is page navigation and four clicks is exit, so neither can be
-# left to the daemon. Critically, the daemon detects quad-click over a
-# 3-second window -- and cycling 1H>4H>1D>1W>1Y is exactly four single
-# clicks, so a user stepping briskly through timeframes would be killed
-# mid-cycle. With "none" the app decides, using the much tighter
-# click_window_ms (400ms default): clicks spaced wider than that are
-# timeframe changes, clicks inside it count toward exit.
+# Tap changes page, hold-and-release performs its action, and four clicks
+# exit. With "none" the SDK groups clicks using the app's configured
+# click_window_ms. The daemon's separate gesture window must not interpret
+# ordinary page browsing as an exit gesture.
 #
 # The daemon's app_exit_requested is still honoured, so setting this back
 # to "quad_click" or "long_press" keeps working. The Esc key is the app's
@@ -175,6 +172,8 @@ def acquire_board(
         return NullBoard(), "headless"
 
     project_root = Path(__file__).resolve().parents[1]
+    managed = (os.getenv("WHISPLAY_APP_ID") == APP_ID
+               and bool(os.getenv("MFRUIT_SESSION") or os.getenv("WHISPLAY_OS_APP_DIR")))
     if launch_command is None:
         launch_command = str(project_root / "run.sh")
     if launch_cwd is None:
@@ -211,7 +210,10 @@ def acquire_board(
 
     proxy.foreground_ready = False
     try:
-        proxy.register()
+        # MFruit OS already registered mfruit-run and its log destination.
+        # Re-registering our standalone command would replace that wrapper.
+        if not managed:
+            proxy.register()
         proxy.start_event_listener()
     except Exception:
         log.exception("daemon registration failed; running headless")

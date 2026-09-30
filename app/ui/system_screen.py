@@ -16,7 +16,7 @@ METER_ROW_HEIGHT = 20
 LEFT = 14
 RIGHT = 240 - 14
 
-# "TEMP" is the widest meter label, so the value column starts clear of it.
+# "Temp" is the widest meter label, so the value column starts clear of it.
 VALUE_X = 58
 BAR_X = 98
 
@@ -40,8 +40,8 @@ class SystemScreen(Screen):
     # --- connectivity checks ------------------------------------------
     def _draw_checks(self, draw, y, conn, snap):
         checks = (
-            ("WIFI", bool(conn.get("wifi"))),
-            ("INTERNET", bool(conn.get("internet"))),
+            ("Wi-Fi", bool(conn.get("wifi"))),
+            ("Internet", bool(conn.get("internet"))),
             ("API", bool(snap.online)),
         )
         label_font = theme.font(12, bold=True)
@@ -50,7 +50,7 @@ class SystemScreen(Screen):
             row_y = y + index * CHECK_ROW_HEIGHT
             draw.text((LEFT, row_y), label, font=label_font, fill=theme.TEXT_DIM)
 
-            state = "OK" if ok else "FAIL"
+            state = "OK" if ok else "Fail"
             color = theme.LIVE if ok else theme.ERROR
             width = theme.text_width(draw, state, label_font)
             right = RIGHT
@@ -70,7 +70,7 @@ class SystemScreen(Screen):
         meters = (
             ("CPU", stats.get("cpu_percent"), "%", 100.0, theme.ACCENT),
             ("RAM", stats.get("memory_percent"), "%", 100.0, theme.ACCENT),
-            ("TEMP", stats.get("temperature_c"), "C", 85.0, None),
+            ("Temp", stats.get("temperature_c"), "C", 85.0, None),
         )
         label_font = theme.font(11, bold=True)
 
@@ -105,12 +105,12 @@ class SystemScreen(Screen):
         y += 7
 
         widgets.draw_label_value(
-            draw, LEFT, y, "UPTIME",
+            draw, LEFT, y, "Uptime",
             format_uptime(stats.get("uptime_seconds")),
             value_color=theme.TEXT, label_size=9, value_size=14,
         )
         widgets.draw_label_value(
-            draw, 126, y, "APP RAM",
+            draw, 126, y, "App RAM",
             f"{stats.get('app_memory_mb'):.0f} MB"
             if stats.get("app_memory_mb") is not None else "--",
             value_color=theme.TEXT, label_size=9, value_size=14,
@@ -122,11 +122,11 @@ class SystemScreen(Screen):
         else:
             updated = "never"
         widgets.draw_label_value(
-            draw, LEFT, y, "UPDATED", updated,
+            draw, LEFT, y, "Updated", updated,
             value_color=theme.TEXT_DIM, label_size=9, value_size=12,
         )
         widgets.draw_label_value(
-            draw, 126, y, "MODE", ctx.board_mode.upper(),
+            draw, 126, y, "Mode", ctx.board_mode.capitalize(),
             value_color=theme.TEXT_DIM, label_size=9, value_size=12,
         )
         y += 28
@@ -134,7 +134,7 @@ class SystemScreen(Screen):
         # Last error is the single most useful field when something breaks.
         if snap.last_error:
             fnt = theme.font(10)
-            message = f"ERROR {snap.last_error}"
+            message = f"Error {snap.last_error}"
             while message and theme.text_width(draw, message, fnt) > RIGHT - LEFT:
                 message = message[:-1]
             draw.text((LEFT, y), message, font=fnt, fill=theme.ERROR)

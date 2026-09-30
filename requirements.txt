@@ -6,6 +6,5 @@ Pillow>=9.0
 python-dotenv>=1.0,<2
 
 # Optional but recommended on the Pi:
-#   numpy   - makes RGB565 conversion ~10x faster (usually preinstalled)
 #   psutil  - richer system stats on the System page; the app falls back
 #             to /proc parsing when it is missing.

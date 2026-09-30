@@ -17,7 +17,7 @@ FIRST_ROW_Y = theme.CONTENT_TOP
 
 class CryptoScreen(Screen):
     name = "top"
-    title = "Top Crypto"
+    title = "Top crypto"
 
     def render(self, draw, ctx):
         snap = ctx.snapshot
@@ -26,7 +26,7 @@ class CryptoScreen(Screen):
         coins = list(snap.top)[: settings.top_count]
         if not coins:
             widgets.draw_centered(
-                draw, 120, "NO DATA", theme.font(14, bold=True), fill=theme.TEXT_MUTED
+                draw, 120, "No data", theme.font(14, bold=True), fill=theme.TEXT_MUTED
             )
             widgets.draw_centered(
                 draw, 142, "Retrying...", theme.font(11), fill=theme.TEXT_MUTED

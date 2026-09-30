@@ -5,7 +5,7 @@
 #   ./install.sh --autostart  also start automatically at boot
 #   ./install.sh --uninstall  remove service + daemon registration
 #
-# Dependencies come from apt where possible: building Pillow or numpy from
+# Dependencies come from apt where possible: building Pillow from
 # source with pip on a Pi Zero 2 W can take the better part of an hour.
 set -euo pipefail
 
@@ -62,7 +62,7 @@ command -v python3 >/dev/null || { echo "python3 not found" >&2; exit 1; }
 ok "$(python3 --version)"
 
 say "Installing dependencies (apt preferred, pip as fallback)"
-APT_PACKAGES=(python3-pil python3-requests python3-yaml python3-numpy python3-dotenv)
+APT_PACKAGES=(python3-pil python3-requests python3-yaml python3-dotenv)
 MISSING=()
 for pkg in "${APT_PACKAGES[@]}"; do
   dpkg -s "$pkg" >/dev/null 2>&1 || MISSING+=("$pkg")
@@ -89,9 +89,6 @@ for mod in PIL requests yaml; do
 done
 python3 -c "import PIL, requests, yaml" || exit 1
 ok "Pillow, requests, PyYAML available"
-python3 -c "import numpy" 2>/dev/null \
-  && ok "numpy available (fast RGB565 conversion)" \
-  || warn "numpy missing: RGB565 conversion falls back to pure Python"
 python3 -c "import dotenv" 2>/dev/null \
   || warn "python-dotenv missing: .env will not be auto-loaded"
 
@@ -165,11 +162,12 @@ cat <<SUMMARY
       single click to select 'BTC Dashboard', then long press
 
   Controls:
-      1 click    next timeframe (1H > 4H > 1D > 1W > 1Y)
-      hold       next page      (Bitcoin > Market > Top > Stats > System)
-      2 clicks   return HOME
-      3 clicks   force refresh
-      4 clicks   leave the app
+      tap / Down       next page (Bitcoin > Market > Top > Stats > System)
+      2 clicks / Up    previous page
+      hold, release / Enter
+                       next timeframe on Bitcoin, refresh on other pages
+      3 clicks / R     force refresh
+      4 clicks / Esc   leave the app
 
   Autostart at boot:
       ./install.sh --autostart

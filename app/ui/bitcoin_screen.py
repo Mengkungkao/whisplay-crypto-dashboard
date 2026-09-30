@@ -73,18 +73,18 @@ class BitcoinScreen(Screen):
         change = snap.chart.change_pct if snap.chart is not None else None
         if change is not None:
             fnt = theme.font(10, bold=True)
-            label = f"{snap.timeframe} CHANGE"
+            label = f"{snap.timeframe} change"
             draw.text((14, row + 2), label, font=fnt, fill=theme.TEXT_MUTED)
             widgets.draw_change(draw, 14 + theme.text_width(draw, label, fnt) + 8,
                                 row, change, font_size=12)
 
         fnt = theme.font(10, bold=True)
         if not snap.online and snap.last_success:
-            text, color = f"LAST {format_clock(snap.last_success)[:5]}", theme.WARN
+            text, color = f"Last {format_clock(snap.last_success)[:5]}", theme.WARN
         elif not snap.has_any_data:
-            text, color = "CONNECTING…", theme.TEXT_MUTED
+            text, color = "Connecting…", theme.TEXT_MUTED
         elif market.volume_24h is not None:
-            text = f"VOL {format_compact(market.volume_24h, settings.currency)}"
+            text = f"Vol {format_compact(market.volume_24h, settings.currency)}"
             color = theme.TEXT_DIM
         else:
             text = ""

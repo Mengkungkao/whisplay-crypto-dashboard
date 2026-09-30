@@ -53,7 +53,7 @@ def draw_label_value(
 ):
     """A dim caption above a bright value -- the core stat block."""
     draw.text(
-        (x, y), label.upper(), font=theme.font(label_size, bold=True),
+        (x, y), label, font=theme.font(label_size, bold=True),
         fill=theme.TEXT_MUTED,
     )
     draw.text(

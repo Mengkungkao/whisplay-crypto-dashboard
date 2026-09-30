@@ -28,7 +28,7 @@ class MarketScreen(Screen):
         # --- headline: total market cap ----------------------------------
         if gd.total_market_cap is not None:
             draw.text(
-                (14, y), "TOTAL MARKET CAP",
+                (14, y), "Total market cap",
                 font=theme.font(10, bold=True), fill=theme.TEXT_MUTED,
             )
             cap_text = format_compact(gd.total_market_cap, settings.currency)
@@ -47,13 +47,13 @@ class MarketScreen(Screen):
         # --- paired metrics ----------------------------------------------
         pairs = []
         if gd.total_volume_24h is not None:
-            pairs.append(("24H VOLUME", format_compact(gd.total_volume_24h, settings.currency), theme.TEXT))
+            pairs.append(("24H volume", format_compact(gd.total_volume_24h, settings.currency), theme.TEXT))
         if gd.btc_dominance is not None:
-            pairs.append(("BTC DOM", format_percent(gd.btc_dominance, 1, signed=False), theme.ACCENT))
+            pairs.append(("BTC dominance", format_percent(gd.btc_dominance, 1, signed=False), theme.ACCENT))
         if gd.eth_dominance is not None:
-            pairs.append(("ETH DOM", format_percent(gd.eth_dominance, 1, signed=False), theme.TEXT))
+            pairs.append(("ETH dominance", format_percent(gd.eth_dominance, 1, signed=False), theme.TEXT))
         if gd.stablecoin_market_cap is not None:
-            pairs.append(("STABLECOINS", format_compact(gd.stablecoin_market_cap, settings.currency), theme.TEXT))
+            pairs.append(("Stablecoins", format_compact(gd.stablecoin_market_cap, settings.currency), theme.TEXT))
 
         column_x = (14, 126)
         for index, (label, value, color) in enumerate(pairs[:4]):
@@ -77,7 +77,7 @@ class MarketScreen(Screen):
 
         if not snap.has_any_data and gd.total_market_cap is None:
             widgets.draw_centered(
-                draw, 130, "NO MARKET DATA", theme.font(13, bold=True),
+                draw, 130, "No market data", theme.font(13, bold=True),
                 fill=theme.TEXT_MUTED,
             )
             widgets.draw_centered(
@@ -87,13 +87,13 @@ class MarketScreen(Screen):
     def _draw_fear_greed(self, draw, y, fng):
         color = theme.fear_greed_color(fng.value)
         draw.text(
-            (14, y), "FEAR / GREED",
+            (14, y), "Fear / greed",
             font=theme.font(10, bold=True), fill=theme.TEXT_MUTED,
         )
         value_font = theme.font(20, bold=True)
         draw.text((14, y + 13), str(fng.value), font=value_font, fill=color)
 
-        label = (fng.classification or "")[:FNG_LABEL_MAX]
+        label = (fng.classification or "").capitalize()[:FNG_LABEL_MAX]
         draw.text(
             (14 + theme.text_width(draw, str(fng.value), value_font) + 8, y + 19),
             label, font=theme.font(12, bold=True), fill=color,

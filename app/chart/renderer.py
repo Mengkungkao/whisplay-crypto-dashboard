@@ -13,7 +13,7 @@ Layout:
             | /         \
     $112.2K |/
             +---------------
-              60 MINUTES
+              60 minutes
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ from app.utils.format import format_compact
 
 # Human label for the x-axis window.
 WINDOW_LABELS = {
-    "1H": "60 MINUTES",
-    "4H": "4 HOURS",
-    "1D": "24 HOURS",
-    "1W": "7 DAYS",
-    "1Y": "12 MONTHS",
+    "1H": "60 minutes",
+    "4H": "4 hours",
+    "1D": "24 hours",
+    "1W": "7 days",
+    "1Y": "12 months",
 }
 
 GUTTER_WIDTH = 42  # space reserved for y-axis price labels
@@ -152,7 +152,7 @@ def _draw_placeholder(draw, box):
     """Shown while the first candles are still loading, or offline."""
     x0, y0, x1, y1 = box
     fnt = theme.font(11, bold=True)
-    text = "CHART UNAVAILABLE"
+    text = "Chart unavailable"
     width = theme.text_width(draw, text, fnt)
     draw.line([(x0 + 4, y1 - 1), (x1, y1 - 1)], fill=theme.GRID, width=1)
     draw.text(

@@ -44,7 +44,7 @@ class StatisticsScreen(Screen):
 
         if market.market_cap_rank is not None:
             fnt = theme.font(11, bold=True)
-            text = f"RANK #{market.market_cap_rank}"
+            text = f"Rank #{market.market_cap_rank}"
             width = theme.text_width(draw, text, fnt)
             draw.text(
                 (theme.SCREEN_WIDTH - 14 - width, top + 6),
@@ -55,7 +55,7 @@ class StatisticsScreen(Screen):
         blocks = self._collect(market, settings)
         if not blocks:
             widgets.draw_centered(
-                draw, 150, "NO STATISTICS", theme.font(13, bold=True),
+                draw, 150, "No statistics", theme.font(13, bold=True),
                 fill=theme.TEXT_MUTED,
             )
             return
@@ -79,25 +79,25 @@ class StatisticsScreen(Screen):
         """Ordered by usefulness; None values are dropped entirely."""
         currency = settings.currency
         candidates = [
-            ("MARKET CAP", market.market_cap,
+            ("Market cap", market.market_cap,
              lambda v: format_compact(v, currency), theme.TEXT),
-            ("24H VOLUME", market.volume_24h,
+            ("24H volume", market.volume_24h,
              lambda v: format_compact(v, currency), theme.TEXT),
-            ("24H HIGH", market.high_24h,
+            ("24H high", market.high_24h,
              lambda v: format_price(v, currency, 0), theme.UP),
-            ("24H LOW", market.low_24h,
+            ("24H low", market.low_24h,
              lambda v: format_price(v, currency, 0), theme.DOWN),
-            ("SUPPLY", market.circulating_supply,
+            ("Supply", market.circulating_supply,
              lambda v: format_supply(v, settings.symbol), theme.TEXT),
-            ("MAX SUPPLY", market.max_supply,
+            ("Max supply", market.max_supply,
              lambda v: format_supply(v, settings.symbol), theme.TEXT_DIM),
-            ("ALL-TIME HIGH", market.ath,
+            ("All-time high", market.ath,
              lambda v: format_price(v, currency, 0), theme.TEXT),
-            ("FROM ATH", market.ath_change_pct,
+            ("From ATH", market.ath_change_pct,
              lambda v: format_percent(v, 1), None),
-            ("7D CHANGE", market.change_7d_pct,
+            ("7D change", market.change_7d_pct,
              lambda v: format_percent(v, 1), None),
-            ("30D CHANGE", market.change_30d_pct,
+            ("30D change", market.change_30d_pct,
              lambda v: format_percent(v, 1), None),
         ]
 

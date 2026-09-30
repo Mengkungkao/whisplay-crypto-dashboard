@@ -73,7 +73,7 @@ cd ~/whisplay-crypto-dashboard
 ./install.sh --autostart     # ...and start automatically at boot
 ```
 
-`install.sh` prefers **apt** packages for Pillow/numpy/requests — building those from source
+`install.sh` prefers **apt** packages for Pillow/requests — building those from source
 with pip on a Pi Zero 2 W can take close to an hour.
 
 No API key is required. The defaults use free, key-less endpoints.
@@ -442,4 +442,10 @@ Telegram notifications, web configuration.
 ## License
 
 Follows the license of the parent Whisplay project.
-# whisplay-crypto-dashboard
+
+
+## MFruit OS lifecycle validation
+
+Managed launches preserve MFruit OS's launch wrapper and logging registration;
+standalone launches still register themselves. `tests/test_board_registration.py`
+covers both native packages and adopted checkouts.

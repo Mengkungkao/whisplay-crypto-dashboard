@@ -98,7 +98,7 @@ def test_screens_never_render_a_missing_metric_as_zero(settings, sample_snapshot
     image = render(StatisticsScreen(), make_ctx(settings, sample_snapshot))
     stats = StatisticsScreen()._collect(sample_snapshot.market, settings)
     labels = [label for label, _, _ in stats]
-    assert "MARKET CAP" not in labels
+    assert "Market cap" not in labels
     assert image is not None
 
 

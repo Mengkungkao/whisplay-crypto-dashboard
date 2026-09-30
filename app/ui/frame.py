@@ -45,9 +45,9 @@ def compose(screen, ctx, status=None, armed: bool = False):
     except Exception:
         # One broken page must never take the whole device down.
         log.exception("screen %s failed to render", screen.name)
-        widgets.draw_centered(canvas.draw, 130, "RENDER ERROR", theme.font(14, bold=True),
+        widgets.draw_centered(canvas.draw, 130, "Render error", theme.font(14, bold=True),
                               fill=theme.ERROR)
-        widgets.draw_centered(canvas.draw, 152, screen.name.upper(), theme.font(11),
+        widgets.draw_centered(canvas.draw, 152, screen.name, theme.font(11),
                               fill=theme.TEXT_MUTED)
     status_bar(canvas, screen.title_for(ctx), status, dot=data_light(ctx.snapshot))
     footer(canvas, hints(screen, armed))

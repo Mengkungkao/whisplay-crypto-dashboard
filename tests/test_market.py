@@ -7,7 +7,7 @@ import pytest
 from app.market.cache import AppState, MarketCache
 from app.market.provider import (
     BitcoinMarketData, ChartSeries, CoinSummary, MarketDataProvider,
-    NotSupportedError, PriceQuote, downsample,
+    PriceQuote, downsample,
 )
 from app.market.service import MarketService
 from app.utils.network import Backoff, NetworkError
