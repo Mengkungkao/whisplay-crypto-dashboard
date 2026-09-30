@@ -56,7 +56,7 @@ from mfruit_sdk.input import (BACK, CHAR, EXTRA, KEY, NEXT, PREVIOUS, SELECT,
                               InputController)
 from mfruit_sdk.status import StatusMonitor
 
-from app.board import acquire_board
+from app.board import APP_ID, acquire_board
 from app.config.settings import load_settings
 from app.market.cache import AppState, MarketCache
 from app.market.service import MarketService
@@ -140,6 +140,7 @@ class DashboardApp:
             debounce_ms=self.settings.button["debounce_ms"],
             click_window_ms=self.settings.button["click_window_ms"],
             long_press_ms=self.settings.button["long_press_ms"],
+            app_id=APP_ID,                 # MFruit OS hands its keys to this app by id
         )
         self.status = StatusMonitor(on_change=lambda _status: self.mark_dirty())
 
